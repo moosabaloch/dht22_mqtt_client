@@ -1,4 +1,5 @@
 const http = require('http')  
+var sensor = require('node-dht-sensor');
 const port = 3000;
 
 // SUBSCRIPTION TOPICS
@@ -11,9 +12,15 @@ var DEVICE_CURRENT_STATE = false;
 var PATIENT = "";
 /////////////////////////////////////////
 
+var temp_dht = 29;
+var hum_dht = 70;
+
 
 var mqtt    = require('mqtt');
 var client  = mqtt.connect('mqtt://192.168.8.102');
+
+
+
 
 
 
@@ -32,16 +39,42 @@ server.listen(port, (err) => {
   console.log(`server is listening on ${port}`)
   console.log(client.options.clientId);
   PATIENT = client.options.clientId;
+   client.subscribe(PATIENT); 
 });
 //////// SERVER CONNECTION END ////////////////
+
+
+//////////// Sensor Data Start //////////////////
+
+
+setInterval(function(){
+sensor.read(22, 2, function(err, temperature, humidity) {
+    if (!err) {
+	temp_dht = temperature.toFixed(1);
+	hum_dht = humidity.toFixed(1);
+
+    //    console.log('temp: ' + temperature.toFixed(1) + '°C, ' +
+     //       'humidity: ' + humidity.toFixed(1) + '%'
+//        );
+    }
+});
+
+},300);
+
+//////////////////////////////////////////////////
+
+
 
 
 
 
 /////// Publish data to server start ////////////
-client.publish('mqtt__topic', "some good mqtt message ",{qos: 0 , retain: false   }, function () {
-  console.log('GOT CB_MQTT');
-} )
+//client.publish('mqtt__topic', "some good mqtt message ",{qos: 0 , retain: false   }, function () {
+ // console.log('GOT CB_MQTT');
+//} )
+
+
+
 /////// Publish data to server end /////////////
 
 
@@ -49,7 +82,7 @@ client.publish('mqtt__topic', "some good mqtt message ",{qos: 0 , retain: false 
 var a = 0
 setInterval(function () {
  if (DEVICE_CURRENT_STATE){
-  client.publish('mqtt_loop', "{'temp':'23','humd':'72','pulse':'542', 'p_id':'"+PATIENT_ID+"'}" ,{qos:0, retain: false}, ()=> console.log('loop 200' + a) )
+  client.publish('sensor_data', "{'temp':'"+temp_dht+"','humd':'"+hum_dht+"','pulse':'542', 'p_id':'"+PATIENT_ID+"'}" ,{qos:0, retain: false}, ()=> console.log('loop 200' + a) )
 a++; 
 }
 } , 1000);
@@ -61,7 +94,7 @@ a++;
 
 
 /////// Subscribe for msg topic START ///////////////
-client.subscribe(PATIENT); 
+//client.subscribe(PATIENT); 
 client.subscribe(DEVICE_ACTIVITY); 
 
 client.on('message', function (topic, message) {
